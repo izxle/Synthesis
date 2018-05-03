@@ -8,7 +8,9 @@ table = [("acac", "C5H7O2"),
          ('CTAB', 'C19H42BrN'),
          ("hz", "N2H4"),
          ("pKPt", "K2PtCl6"),
-         ("pHPt", "H2PtCl6+5H2O")]
+         ("pHPt", "H2PtCl6+5H2O"),
+         ("Oam", "C18H35NH2"),
+         ("Oac", "C18H34O2")]
 
 table = dict(table)
 

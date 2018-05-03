@@ -21,7 +21,7 @@ def get_args(argv):
 
 
 def parse_line(line):
-    words = re.split(' *[:=, ] *', line)
+    words = re.split(' *, *| *: +| +', line)
     key, *vals = words
     for i, v in enumerate(vals):
         if re.match('[-+]?\d+$', v):
@@ -44,6 +44,8 @@ def parse_line(line):
 def parse_config(config):
     config_dict = dict()
     for name, value in config['CATALYST'].items():
+        if ' ' in name:
+            name = name.replace(' ', '_')
         if name == 'percentage':
             if value[0] == 'a':
                 res = 'atomic'
@@ -51,6 +53,9 @@ def parse_config(config):
                 res = 'weight'
             else:
                 raise ValueError(f"percentage can only be 'a' or 'w', not {value}")
+        elif name == 'support':
+            support, percentage = value.split()
+            res = (support, float(percentage))
         elif '\n' in value:
             res = dict()
             for line in value.strip().split('\n'):

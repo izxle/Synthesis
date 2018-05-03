@@ -5,11 +5,37 @@ import copy
 parse_element = elements.symbol
 
 
-class Atom:
-    def __init__(self, element, mass, moles, wt_percentage, at_percentage, precursor=None):
-        self.element = element
+class SimpleReagent:
+    def __init__(self, name, mass=None, moles=None, volume=None):
+        self.name = name
         self.mass = mass
         self.moles = moles
+        self.volume = volume
+
+    def __format__(self, format_spec):
+        return str(self)
+
+    @property
+    def quantity(self):
+        if self.mass is not None:
+            res = f'{self.mass * 1e3:.1f} mg'
+        elif self.volume is not None:
+            res = f'{self.volume * 1e3:.3f} mL'
+        else:
+            res = str(self)
+        return res
+
+    def __str__(self):
+        return str(self.name)
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+
+class Atom(SimpleReagent):
+    def __init__(self, element, mass, moles, wt_percentage, at_percentage, precursor=None):
+        super().__init__(name=element, mass=mass, moles=moles)
+        self.element = element
         self.wt_percentage = wt_percentage
         self.at_percentage = at_percentage
         self.precursor = precursor
@@ -18,36 +44,24 @@ class Atom:
         assert self.element in precursor.atoms, f"{precursor} is not a valid precursor for {self.element}"
         self.precursor = precursor
 
-    def __format__(self, format_spec):
-        return str(self)
 
-    def __str__(self):
-        return str(self.element)
-
-
-class Compound:
-    def __init__(self, formula, mass, moles, purity):
+class Compound(SimpleReagent):
+    def __init__(self, formula, mass, moles, purity=1):
+        super().__init__(name=formula, mass=mass, moles=moles)
         self.formula = formula
         self.atoms = formula.atoms
-        self.mass = mass
-        self.moles = moles
         self.purity = purity
 
     def copy(self):
-        return Compound(self.formula, self.mass, self.moles, self.purity)
+        return Compound(self.name, self.mass, self.moles, self.purity)
 
-    def __format__(self, format_spec):
-        return str(self)
-
-    def __str__(self):
-        return str(self.formula)
-
-    def __eq__(self, other):
-        return self.atoms == other.atoms
+    # def __eq__(self, other):
+    #     return self.atoms == other.atoms
 
 
 class Synthesis:
     def __init__(self, composition: dict, mass: float, precursors: dict,
+                 support=None, other_reagents=None,
                  percentage: str='atomic', experimental=None):
         assert percentage in ['atomic', 'weight'], f"percentage must be 'atomic' or 'weight', not {percentage}"
         self.composition = dict()
@@ -57,6 +71,9 @@ class Synthesis:
         self.percentage = percentage
         self.set_atoms(composition)
         self.set_precursors(precursors)
+        # non-essential information
+        self.set_support(support)
+        self.set_other_reagents(other_reagents)
         if experimental:
             self._calc_experimental()
 
@@ -99,9 +116,19 @@ class Synthesis:
 
     def parse_info(self, info: list):
         res = dict()
+        if isinstance(info, str):
+            info = [info]
         for val in info:
             if '%' in val:
                 res['purity'] = float(val.strip()[:-1]) / 100
+            elif ':' in val:
+                this, ref = val.split(':')
+                res['this'] = dict(value=float(this[:-1]),
+                                   unit=this[-1])
+                res['ref'] = dict(value=float(ref[:-1]),
+                                  unit=ref[-1])
+                # res['units'] = (first[-1], second[-1])
+                # res['ratio'] = (first[:-1], second)
         return res
 
     def add_precursor(self, formula, info):
@@ -162,6 +189,39 @@ class Synthesis:
         self.experimental['atoms'] = atoms
 
 
+    def set_support(self, support):
+        name, percentage = support
+        mass = self.mass * (100 - percentage) / percentage
+        self.support = SimpleReagent(name, mass)
+
+    def set_other_reagents(self, other_reagents: dict):
+        reagents = []
+        for name, ratios in other_reagents.items():
+            info = self.parse_info(ratios)
+            if info['ref']['unit'] == 'w':
+                ref = self.mass
+            elif info['ref']['unit'] == 'a':
+                ref = self.moles
+            else:
+                raise NotImplementedError("Only 'a' and 'w' are implemented")
+
+            ref /= info['ref']['value']
+
+            new_val = info['this']['value'] * ref
+
+            mass = None
+            moles = None
+            volume = None
+            if info['this']['unit'] == 'v':
+                volume = new_val
+            elif info['this']['unit'] == 'w':
+                mass = new_val
+            else:
+                raise NotImplementedError("Only 'v' and 'w' are implemented")
+            r = SimpleReagent(name=name, mass=mass, volume=volume, moles=moles)
+            reagents.append(r)
+        self.other_reagents = reagents
+
     def __str__(self):
         res = 'Theoretical\n'
         res += f'Core:      {self.mass / 1e3:.1f} mg\t{self.moles / 1e3:.1f} mmols\n'
@@ -173,9 +233,13 @@ class Synthesis:
                  f'{a.moles * 1e3:8.5f}   {a.precursor:20}   {a.precursor.mass * 1e3:6.3f}'
                  for a in self.atoms.values())
         res += '\n'.join(atoms) + '\n'
+        res += 'Other reagents\n'
+        reagents = (f'{r.name:15} {r.quantity}'
+                    for r in self.other_reagents)
+        res += '\n'.join(reagents) + '\n'
         
         if self.experimental:
-            res += f'Experimental\nCore:      {self.experimental["mass"] / 1e3:.1f} mg\t'
+            res += f'\nExperimental\nCore:      {self.experimental["mass"] / 1e3:.1f} mg\t'
             res += f'{self.experimental["moles"] / 1e3:.1f} mmols\n'
             res += 'mass [mg]\tmoles [mmol]\n'
             res += 'Element   at%   wt%   mass0   massf     moles   precursor       mass\n'
@@ -184,6 +248,6 @@ class Synthesis:
                      f'{a.mass * 1e3:6.2f}  {a.mass * 1e3:6.2f}  ' +
                      f'{a.moles * 1e3:8.5f}   {a.precursor:20}   {a.precursor.mass * 1e3:6.3f}'
                      for a in self.experimental["atoms"].values())
-            res += '\n'.join(atoms)
+            res += '\n'.join(atoms) + '\n'
 
         return res
