@@ -13,7 +13,7 @@ class SimpleReagent:
         self.volume = volume
 
     def __format__(self, format_spec):
-        return str(self)
+        return f'{str(self):{format_spec}}'
 
     @property
     def quantity(self):
@@ -224,19 +224,21 @@ class Synthesis:
 
     def __str__(self):
         res = 'Theoretical\n'
-        res += f'Core:      {self.mass / 1e3:.1f} mg\t{self.moles / 1e3:.1f} mmols\n'
+        res += f'Core:      {self.mass * 1e3:.1f} mg\t{self.moles * 1e3:.1f} mmols\n'
         res += 'mass [mg]\tmoles [mmol]\n'
-        res += 'Element   at%   wt%   mass0   massf     moles   precursor       mass\n'
+        res += 'Element    at%   wt%   mass0   massf     moles   precursor         mass\n'
         # TODO: add reation
         atoms = (f'   {a:3}   {a.at_percentage * 100:5.1f} {a.wt_percentage * 100:5.1f}  ' +
                  f'{a.mass * 1e3:6.2f}  {a.mass * 1e3:6.2f}  ' +
-                 f'{a.moles * 1e3:8.5f}   {a.precursor:20}   {a.precursor.mass * 1e3:6.3f}'
+                 f'{a.moles * 1e3:8.5f}   {a.precursor:15}   {a.precursor.mass * 1e3:6.3f}'
                  for a in self.atoms.values())
         res += '\n'.join(atoms) + '\n'
         res += 'Other reagents\n'
         reagents = (f'{r.name:15} {r.quantity}'
                     for r in self.other_reagents)
         res += '\n'.join(reagents) + '\n'
+        if self.support:
+            res += f'{self.support:16} {self.support.quantity}\n'
         
         if self.experimental:
             res += f'\nExperimental\nCore:      {self.experimental["mass"] / 1e3:.1f} mg\t'
