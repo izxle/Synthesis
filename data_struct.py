@@ -241,8 +241,8 @@ class Synthesis:
             res += f'{self.support:16} {self.support.quantity}\n'
         
         if self.experimental:
-            res += f'\nExperimental\nCore:      {self.experimental["mass"] / 1e3:.1f} mg\t'
-            res += f'{self.experimental["moles"] / 1e3:.1f} mmols\n'
+            res += f'\nExperimental\nCore:      {self.experimental["mass"] * 1e3:.1f} mg\t'
+            res += f'{self.experimental["moles"] * 1e3:.1f} mmols\n'
             res += 'mass [mg]\tmoles [mmol]\n'
             res += 'Element   at%   wt%   mass0   massf     moles   precursor       mass\n'
             # TODO: add reation
