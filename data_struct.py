@@ -55,8 +55,8 @@ class Compound(SimpleReagent):
     def copy(self):
         return Compound(self.name, self.mass, self.moles, self.purity)
 
-    # def __eq__(self, other):
-    #     return self.atoms == other.atoms
+    def __eq__(self, other):
+        return self.atoms == other.atoms
 
 
 class Synthesis:
@@ -191,7 +191,7 @@ class Synthesis:
 
     def set_support(self, support):
         name, percentage = support
-        mass = self.mass * (100 - percentage) / percentage
+        mass = self.mass * percentage / (100 - percentage)
         self.support = SimpleReagent(name, mass)
 
     def set_other_reagents(self, other_reagents: dict):
