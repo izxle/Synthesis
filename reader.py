@@ -65,6 +65,18 @@ def parse_config(config):
             res = float(value)
         config_dict[name] = res
 
+    config_dict['experimental'] = dict()
+    for name, value in config['EXPERIMENTAL'].items():
+        if name == 'precursors':
+            res = dict()
+            for line in value.strip().split('\n'):
+                k, v = parse_line(line)
+                res[k] = v
+        elif name == 'support':
+            support, percentage = value.split()
+            res = (support, float(percentage))
+        config_dict['experimental'][name] = res
+
     return config_dict
 
 
