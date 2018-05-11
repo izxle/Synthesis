@@ -73,6 +73,8 @@ def parse_config(config):
             for line in value.strip().split('\n'):
                 k, v = parse_line(line)
                 res[k] = v
+        elif name == 'catalyst_mass':
+            res = float(value)
         elif name == 'support':
             support, percentage = value.split()
             res = (support, float(percentage))

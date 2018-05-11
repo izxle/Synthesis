@@ -62,7 +62,7 @@ class Compound(SimpleReagent):
 
 
 class Experimental:
-    def __init__(self, atoms, precursors: dict, support: Tuple[str, float]=None):
+    def __init__(self, atoms, precursors: dict, support: Tuple[str, float]=None, catalyst_mass: float=0.0):
         """
 
         :param atoms: every Atom must have a precursor
@@ -70,9 +70,9 @@ class Experimental:
         :param support:
         """
         self.mass = 0
-        self.catalyst_mass = 0
         self.catalyst_moles = 0
         self.wt_percentage = 1
+        self.catalyst_mass = catalyst_mass
         self.atoms = atoms
         self.set_precursors(precursors)
         self.set_support(*support)
@@ -81,6 +81,7 @@ class Experimental:
         support = SimpleReagent(name=name, mass=mass)
         self.support = support
         self.mass += mass
+        self.catalyst_yield = self.catalyst_mass / self.theoretical_mass
         self.wt_percentage = self.catalyst_mass / self.mass
 
     def set_precursors(self, precursors: dict):
@@ -114,9 +115,11 @@ class Experimental:
             atoms[element].mass = element_mass
             atoms[element].moles = element_moles
 
-        self.catalyst_mass = total_mass
+        self.theoretical_mass = total_mass
+        if self.catalyst_mass == 0:
+            self.catalyst_mass = total_mass
         self.catalyst_moles = total_moles
-        self.mass = total_mass
+        self.mass = self.catalyst_mass
 
         # calculating element weight and atomic percentages in final catalyst
         for element, atom in atoms.items():
@@ -361,7 +364,8 @@ class Synthesis:
                    f'Total:  {self.experimental.mass:.1f} mg    ' \
                    f'Core:  {self.experimental.catalyst_mass:.1f} mg\t' \
                    f'{self.experimental.catalyst_moles:.4f} mmols  ' \
-                   f'{self.experimental.wt_percentage * 100:.1f} %wt\n'
+                   f'{self.experimental.wt_percentage * 100:.1f} %wt\n' \
+                   f'Catalyst yield: {self.experimental.catalyst_yield * 100: .1f} %\n'
             res += 'mass [mg]\tmoles [mmol]\n'
             res += 'Element   at%   wt%   mass0   massf     moles   precursor       mass\n'
             atoms = (f'   {a:3}   {a.at_percentage * 100:5.1f} {a.wt_percentage * 100:5.1f}  ' +
