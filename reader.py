@@ -42,6 +42,7 @@ def parse_line(line):
 
 
 def parse_config(config):
+    # TODO: create functions to handle reading sections
     config_dict = dict()
     for name, value in config['CATALYST'].items():
         if ' ' in name:
@@ -76,6 +77,9 @@ def parse_config(config):
             support, percentage = value.split()
             res = (support, float(percentage))
         config_dict['experimental'][name] = res
+
+    ink = {name: float(value) for name, value in config['INK'].items()}
+    config_dict['ink'] = ink
 
     return config_dict
 

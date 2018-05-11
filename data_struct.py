@@ -2,6 +2,7 @@ from periodictable import elements
 from common_names import parse_formula
 from copy import deepcopy
 from typing import Tuple
+from math import pi
 
 parse_element = elements.symbol
 
@@ -123,6 +124,64 @@ class Experimental:
             atoms[element].wt_percentage = atom.mass / total_mass
 
 
+class ThinFilm:
+    def __init__(self, load: float, diameter: float,
+                 support_wt_percentage: float=0, PGM_wt_percentage: float=1.0):
+        self.load = load
+        self.support_wt_percentage = support_wt_percentage
+        self.PGM_wt_percentage = PGM_wt_percentage
+        self.set_area(diameter=diameter)
+
+        PGM_mass = load * self.area
+        catalyst_mass = PGM_mass / PGM_wt_percentage
+        total_mass = catalyst_mass * (2 - support_wt_percentage)
+        self.PGM_mass = PGM_mass
+        self.total_mass = total_mass
+
+    def ink_from_sample(self, sample_volume, ink_volume=None, catalyst_mass=None):
+        ink_concentration = self.total_mass / sample_volume
+        if ink_volume:
+            catalyst_mass = ink_concentration * ink_volume
+        elif catalyst_mass:
+            ink_volume = catalyst_mass / ink_concentration
+        else:
+            raise ValueError('must provide `ink_volume` or `catalyst_mass`.')
+        ink = Ink(mass=catalyst_mass, volume=ink_volume, concentration=ink_concentration)
+        self.ink = ink
+        return ink
+
+    def set_area(self, area=None, diameter=None):
+        if area:
+            self.area = area
+        elif diameter:
+            # diameter in cm
+            self.diameter = diameter
+            self.area = pi * (self.diameter / 2)**2
+        else:
+            raise ValueError('Must provide area or diameter')
+
+    def __str__(self):
+        res = 'Thin Film\n' \
+              'Load     Area    mass    PGM_mass\n' \
+              'ug/cm^2  cm^2    ug      ug\n' \
+              f'{self.load:7.1f}  {self.area:6.3f}  {self.total_mass:6.3f}  {self.PGM_mass:7.3f}\n  '
+        return res
+
+
+class Ink:
+    def __init__(self, mass, volume, concentration):
+        self.mass = mass
+        self.volume = volume
+        self.concentration = concentration
+
+    def __str__(self):
+        res = 'Ink\n' \
+              'mass    volume  Conc\n' \
+              'mg      mL      mg/mL\n' \
+              f'{self.mass:6.4f}  {self.volume:6.1f}  {self.concentration:5.3f}\n'
+        return res
+
+
 class Synthesis:
     def __init__(self, composition: dict, mass: float, precursors: dict, percentage: str='atomic',
                  support: tuple=None,
@@ -225,47 +284,25 @@ class Synthesis:
         atoms = deepcopy(self.atoms)
         self.experimental = Experimental(atoms=atoms, **experimental)
 
-        # total_mass = 0
-        # total_moles = 0
-        # for formula, mass in experimental['precursors'].items():
-        #     precursor = parse_formula(formula)
-        #     element = next(elm for elm in self.composition if elm in precursor.atoms)
-        #     prev_precursor = self.atoms[element].precursor
-        #     assert prev_precursor == precursor, f"precursor for {element} does not match"
-        #     purity = prev_precursor.purity
-        #     moles = mass * purity / precursor.mass
-        #     new_precursor = Compound(formula=precursor,
-        #                              purity=purity,
-        #                              mass=mass,
-        #                              moles=moles)
-        #     atoms[element].set_precursor(new_precursor)
-        #     total_mass += mass * purity * element.mass / precursor.mass
-        #     total_moles += moles
-        #
-        # support_name, support_mass = experimental['support']
-        # support = SimpleReagent(name=support_name, mass=support_mass)
-        #
-        # self.experimental['mass'] = total_mass
-        # self.experimental['moles'] = total_moles
-        #
-        # for element, atom in atoms.items():
-        #     precursor = atom.precursor
-        #     n = precursor.atoms[element]
-        #     moles = precursor.moles * n
-        #     mass = moles * element.mass
-        #
-        #     atoms[element].mass = mass
-        #     atoms[element].moles = moles
-        #     atoms[element].at_percentage = moles / total_moles
-        #     atoms[element].wt_percentage = mass / total_mass
-        # self.experimental['atoms'] = atoms
-
     def set_ink(self, ink: dict):
+        PGM = (parse_element('Pt'), parse_element('Pd'))
+        PGM_wt_percentage = sum(a.wt_percentage
+                                for a in self.experimental.atoms.values()
+                                if a.element in PGM)
+        support_wt_percentage = self.experimental.support.mass / self.experimental.mass
+
+        load = ink['load']
+        diameter = ink['diameter']
+        film = ThinFilm(load=load, diameter=diameter,
+                        support_wt_percentage=support_wt_percentage,
+                        PGM_wt_percentage=PGM_wt_percentage)
+        catalyst_mass = ink.get('catalyst_mass')
+        ink_volume = ink.get('ink_volume')
+        sample_volume = ink['sample_volume']
+        ink = film.ink_from_sample(catalyst_mass=catalyst_mass, ink_volume=ink_volume, sample_volume=sample_volume)
+
+        self.film = film
         self.ink = ink
-        for name, value in ink.items():
-            pass
-
-
 
     def set_support(self, support):
         name, percentage = support
@@ -332,5 +369,10 @@ class Synthesis:
                      f'{a.moles:8.5f}   {a.precursor:15}   {a.precursor.mass:6.3f}'
                      for a in self.experimental.atoms.values())
             res += '\n'.join(atoms) + '\n'
+
+            if self.film:
+                res += str(self.film)
+                res += str(self.ink)
+
 
         return res
