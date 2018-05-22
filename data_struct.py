@@ -204,6 +204,7 @@ class Synthesis:
         self.set_support(support)
         self.set_other_reagents(other_reagents)
         if experimental:
+            # TODO: add other reagents to experimental
             self.set_experimental(experimental)
             if ink:
                 self.set_ink(ink)
@@ -288,7 +289,9 @@ class Synthesis:
         self.experimental = Experimental(atoms=atoms, **experimental)
 
     def set_ink(self, ink: dict):
-        PGM = (parse_element('Pt'), parse_element('Pd'))
+        PGM = [parse_element('Pt'), parse_element('Pd')]
+        for element in ink.get('PGM', []):
+            PGM.append(parse_element(element))
         PGM_wt_percentage = sum(a.wt_percentage
                                 for a in self.experimental.atoms.values()
                                 if a.element in PGM)
