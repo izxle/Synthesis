@@ -67,7 +67,8 @@ def parse_config(config):
         config_dict[name] = res
 
     config_dict['experimental'] = dict()
-    for name, value in config['EXPERIMENTAL'].items():
+    experimental_config = config._sections.get('EXPERIMENTAL', dict()).items()
+    for name, value in experimental_config:
         if name == 'precursors':
             res = dict()
             for line in value.strip().split('\n'):
@@ -80,7 +81,8 @@ def parse_config(config):
             res = (support, float(percentage))
         config_dict['experimental'][name] = res
 
-    ink = {name: float(value) for name, value in config['INK'].items()}
+    ink_config = config._sections.get('INK', dict()).items()
+    ink = {name: float(value) for name, value in ink_config}
     config_dict['ink'] = ink
 
     return config_dict
