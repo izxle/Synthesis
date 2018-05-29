@@ -137,7 +137,7 @@ class ThinFilm:
 
         PGM_mass = load * self.area
         catalyst_mass = PGM_mass / PGM_wt_percentage
-        total_mass = catalyst_mass * (2 - support_wt_percentage)
+        total_mass = catalyst_mass / (1 - support_wt_percentage)
         self.PGM_mass = PGM_mass
         self.total_mass = total_mass
 
