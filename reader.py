@@ -42,6 +42,7 @@ def parse_line(line):
 
 
 def parse_config(config):
+    # TODO: handle errors to reflect the name of the field that failed
     # TODO: create functions to handle reading sections
     config_dict = dict()
     for name, value in config['CATALYST'].items():
@@ -67,8 +68,8 @@ def parse_config(config):
         config_dict[name] = res
 
     config_dict['experimental'] = dict()
-    experimental_config = config._sections.get('EXPERIMENTAL', dict()).items()
-    for name, value in experimental_config:
+    experimental_config = config._sections.get('EXPERIMENTAL', dict())
+    for name, value in experimental_config.items():
         if name == 'precursors':
             res = dict()
             for line in value.strip().split('\n'):
@@ -81,8 +82,14 @@ def parse_config(config):
             res = (support, float(percentage))
         config_dict['experimental'][name] = res
 
-    ink_config = config._sections.get('INK', dict()).items()
-    ink = {name: float(value) for name, value in ink_config}
+    ink = dict()
+    ink_config = config._sections.get('INK', dict())
+    for name, value in ink_config.items():
+        if name == 'PGM':
+            v = value.split()
+        else:
+            v = float(value)
+        ink[name] = v
     config_dict['ink'] = ink
 
     return config_dict
