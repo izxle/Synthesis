@@ -24,4 +24,5 @@ def parse_common_name(s):
 
 
 def parse_formula(name):
+    # TODO: check if name is valid before attempting to parse
     return formula(parse_common_name(name))

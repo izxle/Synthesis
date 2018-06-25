@@ -1,2 +1,2 @@
 # Synthesis
-Calculations for metalic nanoparticles synthesis
+Calculations for metallic nanoparticles synthesis

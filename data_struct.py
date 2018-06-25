@@ -191,6 +191,7 @@ class Synthesis:
                  other_reagents: dict = None,
                  experimental: dict=None,
                  ink: dict=None):
+        # TODO: check other_reagents
         assert percentage in ['atomic', 'weight'], f"percentage must be 'atomic' or 'weight', not {percentage}"
         self.composition = dict()
         self.atoms = dict()
